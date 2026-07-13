@@ -1,0 +1,162 @@
+{
+  "name": "FeedbackOS",
+  "version": "0.2.0-formbricks-parity",
+  "sourceDocs": [
+    "https://formbricks.com/docs/surveys/overview",
+    "https://formbricks.com/docs/platform/features/integrations/overview",
+    "https://formbricks.com/docs/api-v2-reference/client-api--workspace/get-workspace-state",
+    "https://formbricks.com/docs/llms.txt"
+  ],
+  "surveyTypes": [
+    "Link survey",
+    "Website & App survey",
+    "Website survey",
+    "Mobile app survey"
+  ],
+  "questionTypes": [
+    "Open Text",
+    "Multiple Choice",
+    "NPS",
+    "CTA",
+    "Rating",
+    "Consent",
+    "Picture Selection",
+    "File Upload",
+    "Matrix",
+    "Address"
+  ],
+  "events": [
+    "survey.published",
+    "survey.displayed",
+    "survey.dismissed",
+    "survey.completed",
+    "response.created",
+    "response.updated",
+    "response.finished",
+    "response.low_score",
+    "contact.updated",
+    "webhook.delivered",
+    "integration.payload_prepared",
+    "automation.requested"
+  ],
+  "integrations": {
+    "webhooks": {
+      "status": "server_required",
+      "env": [
+        "WEBHOOK_SIGNING_SECRET"
+      ],
+      "events": [
+        "response.created",
+        "response.updated",
+        "survey.completed"
+      ]
+    },
+    "airtable": {
+      "status": "server_required",
+      "env": [
+        "AIRTABLE_API_KEY",
+        "AIRTABLE_BASE_ID",
+        "AIRTABLE_TABLE_ID"
+      ],
+      "events": [
+        "response.created"
+      ]
+    },
+    "googleSheets": {
+      "status": "server_required",
+      "env": [
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "GOOGLE_REFRESH_TOKEN"
+      ],
+      "events": [
+        "response.created"
+      ]
+    },
+    "hubspot": {
+      "status": "server_required",
+      "env": [
+        "HUBSPOT_CLIENT_ID",
+        "HUBSPOT_CLIENT_SECRET"
+      ],
+      "events": [
+        "contact.updated",
+        "response.created"
+      ]
+    },
+    "notion": {
+      "status": "server_required",
+      "env": [
+        "NOTION_CLIENT_ID",
+        "NOTION_CLIENT_SECRET",
+        "NOTION_DATABASE_ID"
+      ],
+      "events": [
+        "response.created"
+      ]
+    },
+    "slack": {
+      "status": "server_required",
+      "env": [
+        "SLACK_CLIENT_ID",
+        "SLACK_CLIENT_SECRET",
+        "SLACK_SIGNING_SECRET"
+      ],
+      "events": [
+        "response.created",
+        "response.low_score"
+      ]
+    },
+    "zapier": {
+      "status": "server_required",
+      "env": [
+        "ZAPIER_WEBHOOK_URL",
+        "WEBHOOK_SIGNING_SECRET"
+      ],
+      "events": [
+        "response.created"
+      ]
+    },
+    "make": {
+      "status": "server_required",
+      "env": [
+        "MAKE_WEBHOOK_URL",
+        "WEBHOOK_SIGNING_SECRET"
+      ],
+      "events": [
+        "response.created"
+      ]
+    },
+    "n8n": {
+      "status": "server_required",
+      "env": [
+        "N8N_WEBHOOK_URL",
+        "WEBHOOK_SIGNING_SECRET"
+      ],
+      "events": [
+        "response.created"
+      ]
+    },
+    "activepieces": {
+      "status": "server_required",
+      "env": [
+        "ACTIVEPIECES_WEBHOOK_URL",
+        "WEBHOOK_SIGNING_SECRET"
+      ],
+      "events": [
+        "response.created"
+      ]
+    },
+    "wordpress": {
+      "status": "snippet_required",
+      "env": [
+        "WORDPRESS_SITE_URL",
+        "WORKSPACE_ID"
+      ],
+      "events": [
+        "survey.displayed",
+        "response.created"
+      ]
+    }
+  }
+}
