@@ -31,7 +31,7 @@ state, audit records, and the availability and integrity of the public SDK.
 - **Integration providers** receive outbound events and may send webhooks back.
   Provider payloads and delivery metadata are untrusted until signatures and
   replay rules are verified.
-- **The hosting control plane** supplies D1/R2 bindings and runtime secrets.
+- **The hosting control plane** supplies PostgreSQL/Redis connections and runtime secrets.
   Operator secrets must remain server-side and must not be included in browser
   bundles, public manifests, logs, or exported response data.
 
@@ -56,8 +56,10 @@ state, audit records, and the availability and integrity of the public SDK.
 
 ### Assumptions and out of scope
 
-The Cloudflare D1 binding is the source of durable application state in
-production. A local process without that binding is not a production data store.
+PostgreSQL is the source of durable application state in production. A local
+process without `DATABASE_URL` is not a production data store. GitHub Pages is
+only a public landing/source surface and never receives the multi-tenant data
+store or server secrets.
 Compromise of the hosting provider or an authenticated workspace operator is out
 of scope, but auditability and least privilege still matter. Availability attacks
 against the hosting provider are out of scope; application-level abuse such as

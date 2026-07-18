@@ -39,12 +39,12 @@ for (const file of publicFiles) {
 
 const schema = await readFile(join(root, "db", "schema.ts"), "utf8");
 if (!schema.includes("pgTable")) failures.push("production schema is not PostgreSQL");
-for (const table of ["surveys", "respondents", "responses", "integrationEvents", "sdkEvents", "auditLogs"]) {
+for (const table of ["accounts", "surveys", "respondents", "responses", "integrationEvents", "sdkEvents", "auditLogs"]) {
   if (!new RegExp(`export const ${table}`).test(schema)) failures.push(`missing production table: ${table}`);
 }
 
 const migration = await readFile(join(root, "db", "migrations", "001_initial.sql"), "utf8");
-if ((migration.match(/workspace_id TEXT NOT NULL/g) ?? []).length !== 6) {
+if ((migration.match(/workspace_id TEXT NOT NULL/g) ?? []).length !== 7) {
   failures.push("production migration does not scope all sensitive tables");
 }
 

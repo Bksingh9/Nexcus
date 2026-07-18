@@ -59,13 +59,13 @@ async function runtimeSecret(name: string) {
   return process.env[name] ?? "";
 }
 
-function bytesToBase64Url(bytes: Uint8Array) {
+export function bytesToBase64Url(bytes: Uint8Array) {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
 }
 
-function base64UrlToBytes(value: string) {
+export function base64UrlToBytes(value: string) {
   const padded = value.replaceAll("-", "+").replaceAll("_", "/") + "===";
   const binary = atob(padded.slice(0, padded.length - (padded.length % 4)));
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
@@ -163,6 +163,11 @@ async function verifySessionToken(token: string): Promise<SessionPayload | null>
 export async function getWorkspacePrincipal(request: Request) {
   const session = await verifySessionToken(cookieValue(request, SESSION_COOKIE));
   return session;
+}
+
+export function sessionCookieHeader(request: Request, token: string, maxAge = SESSION_MAX_AGE_SECONDS) {
+  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
+  return `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`;
 }
 
 export async function requireWorkspaceScope(request: Request) {

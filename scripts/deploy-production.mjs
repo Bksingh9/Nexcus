@@ -4,7 +4,7 @@ if (!productionUrl) {
 }
 
 const requiredSnippets = [
-  "<title>FeedbackOS</title>",
+  "<title>Nexcus - Product Feedback Platform</title>",
   "Clean-room Formbricks-style MVP",
   "Build surveys",
   "Submit a real demo response",

@@ -20,6 +20,16 @@ export const surveys = sqliteTable("surveys", {
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const accounts = sqliteTable("accounts", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").notNull(),
+  email: text("email").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const respondents = sqliteTable("respondents", {
   id: text("id").primaryKey(),
   workspaceId: text("workspace_id").notNull().default("default-workspace"),

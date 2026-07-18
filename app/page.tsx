@@ -403,6 +403,66 @@ function readInitialWorkspace() {
   return defaultWorkspace;
 }
 
+function AuthScreen({ onAuthenticated }: { onAuthenticated: () => void }) {
+  const [mode, setMode] = useState<"login" | "signup">("signup");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/auth/${mode}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password, displayName }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { message?: string; error?: string };
+      if (!response.ok) {
+        setError(payload.message ?? (payload.error === "account_exists" ? "An account already exists for this email." : "Authentication failed."));
+        return;
+      }
+      onAuthenticated();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <main className="auth-shell">
+      <section className="auth-panel">
+        <div className="brand-lockup">
+          <div className="brand-mark">N</div>
+          <div>
+            <p className="eyebrow">Nexcus</p>
+            <h1>Feedback Ops</h1>
+          </div>
+        </div>
+        <p className="auth-intro">Create a private workspace for customer feedback, surveys, and response analytics.</p>
+        <div className="auth-tabs" role="tablist" aria-label="Authentication mode">
+          <button className={mode === "signup" ? "active" : ""} onClick={() => setMode("signup")} type="button">Create account</button>
+          <button className={mode === "login" ? "active" : ""} onClick={() => setMode("login")} type="button">Sign in</button>
+        </div>
+        <form className="auth-form" onSubmit={submit}>
+          {mode === "signup" && (
+            <label className="field-label">Name<input autoComplete="name" onChange={(event) => setDisplayName(event.target.value)} required value={displayName} /></label>
+          )}
+          <label className="field-label">Email<input autoComplete="email" onChange={(event) => setEmail(event.target.value)} required type="email" value={email} /></label>
+          <label className="field-label">Password<input autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={12} onChange={(event) => setPassword(event.target.value)} required type="password" value={password} /></label>
+          {error && <p className="auth-error" role="alert">{error}</p>}
+          <button className="button primary" disabled={busy} type="submit">{busy ? "Working..." : mode === "signup" ? "Create workspace" : "Sign in"}</button>
+        </form>
+        <small className="auth-note">Your workspace starts empty. No contacts, responses, or integrations are seeded.</small>
+      </section>
+    </main>
+  );
+}
+
 export default function Home() {
   const [initialState] = useState(() => {
     const workspace = readInitialWorkspace();
@@ -419,15 +479,21 @@ export default function Home() {
   const [selectedRespondentId, setSelectedRespondentId] = useState(initialState.respondentId);
   const [draftAnswers, setDraftAnswers] = useState<Record<string, string>>({});
   const [toast, setToast] = useState("Ready to build your feedback loop.");
+  const [authChecked, setAuthChecked] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     async function hydrateFromServer() {
       const session = await fetch("/api/session", { credentials: "include" }).catch(() => null);
       if (!session?.ok) {
+        setAuthenticated(false);
+        setAuthChecked(true);
         setToast("Sign in to connect this workspace to server storage.");
         return;
       }
+      setAuthenticated(true);
+      setAuthChecked(true);
       const response = await fetch("/api/workspace", { credentials: "include" }).catch(() => null);
       if (!response?.ok) {
         setToast("Workspace storage is unavailable until the database is connected.");
@@ -495,6 +561,13 @@ export default function Home() {
     () => Array.from(new Set(workspace.responses.flatMap((response) => response.tags))).sort(),
     [workspace.responses],
   );
+
+  if (!authChecked) {
+    return <main className="auth-shell"><p className="toast">Connecting to Nexcus...</p></main>;
+  }
+  if (!authenticated) {
+    return <AuthScreen onAuthenticated={() => window.location.reload()} />;
+  }
 
   const usageLimit = planCatalog[workspace.plan].responses;
   const usagePercent =
@@ -839,9 +912,9 @@ export default function Home() {
     <main className="app-shell">
       <aside className="sidebar">
         <div className="brand-lockup">
-          <div className="brand-mark">F</div>
+          <div className="brand-mark">N</div>
           <div>
-            <p className="eyebrow">FeedbackOS</p>
+            <p className="eyebrow">Nexcus</p>
             <h1>Feedback Ops</h1>
           </div>
         </div>

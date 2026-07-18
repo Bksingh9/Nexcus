@@ -15,6 +15,16 @@ CREATE TABLE IF NOT EXISTS surveys (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS accounts (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  display_name TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS respondents (
   id TEXT PRIMARY KEY,
   workspace_id TEXT NOT NULL DEFAULT 'default-workspace',
@@ -70,6 +80,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 
 CREATE INDEX IF NOT EXISTS surveys_workspace_id_idx ON surveys (workspace_id);
+CREATE INDEX IF NOT EXISTS accounts_workspace_id_idx ON accounts (workspace_id);
 CREATE INDEX IF NOT EXISTS respondents_workspace_id_idx ON respondents (workspace_id);
 CREATE INDEX IF NOT EXISTS responses_workspace_id_idx ON responses (workspace_id);
 CREATE INDEX IF NOT EXISTS responses_survey_id_idx ON responses (survey_id);

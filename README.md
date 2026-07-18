@@ -1,6 +1,6 @@
-# FeedbackOS MVP
+# Nexcus
 
-FeedbackOS is a clean-room, Formbricks-style product feedback platform. It provides a survey dashboard, authenticated server-backed CRUD, public link surveys, a browser SDK, response analytics, CSV protection, and integration event contracts.
+Nexcus is a clean-room, Formbricks-style product feedback platform. It provides a survey dashboard, authenticated server-backed CRUD, public link surveys, a browser SDK, response analytics, CSV protection, and integration event contracts.
 
 ## What Works Now
 

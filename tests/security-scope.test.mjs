@@ -20,6 +20,7 @@ test("sensitive tables carry workspace scope", async () => {
   const migration = await read("db/migrations/001_initial.sql");
 
   for (const table of [
+    "accounts",
     "surveys",
     "respondents",
     "responses",
@@ -30,8 +31,8 @@ test("sensitive tables carry workspace scope", async () => {
     assert.match(schema, new RegExp(`export const ${table}`));
   }
 
-  assert.equal(schema.match(/workspaceId: text\("workspace_id"\)/g)?.length, 6);
-  assert.equal(migration.match(/workspace_id TEXT NOT NULL/g)?.length, 6);
+  assert.equal(schema.match(/workspaceId: text\("workspace_id"\)/g)?.length, 7);
+  assert.equal(migration.match(/workspace_id TEXT NOT NULL/g)?.length, 7);
 });
 
 test("workspace-scoped APIs require and apply tenant scope", async () => {

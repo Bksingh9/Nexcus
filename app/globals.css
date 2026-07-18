@@ -34,6 +34,67 @@ body {
     sans-serif;
 }
 
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: #f4f7fb;
+}
+
+.auth-panel {
+  width: min(100%, 460px);
+  padding: 32px;
+  background: #ffffff;
+  border: 1px solid #d7e0eb;
+  border-radius: 8px;
+  box-shadow: 0 18px 45px rgb(22 41 66 / 10%);
+}
+
+.auth-intro {
+  color: #526174;
+  line-height: 1.6;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 24px 0;
+  border-bottom: 1px solid #d7e0eb;
+}
+
+.auth-tabs button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #526174;
+  cursor: pointer;
+  padding: 10px 4px;
+}
+
+.auth-tabs button.active {
+  border-color: #1463df;
+  color: #123f8f;
+}
+
+.auth-form {
+  display: grid;
+  gap: 16px;
+}
+
+.auth-error {
+  margin: 0;
+  color: #b42318;
+  font-size: 14px;
+}
+
+.auth-note {
+  display: block;
+  margin-top: 20px;
+  color: #68778b;
+  line-height: 1.5;
+}
+
 button,
 input,
 select,

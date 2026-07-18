@@ -2,13 +2,21 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import {
   createSessionToken,
   routeError,
-  sessionCookieName,
-  sessionMaxAgeSeconds,
+  getWorkspacePrincipal,
+  sessionCookieHeader,
   workspaceIdForEmail,
 } from "../_lib";
 
 export async function GET(request: Request) {
   try {
+    const existingPrincipal = await getWorkspacePrincipal(request);
+    if (existingPrincipal) {
+      return Response.json({
+        user: { displayName: existingPrincipal.displayName, email: existingPrincipal.email },
+        workspaceId: existingPrincipal.workspaceId,
+      });
+    }
+
     const user = await getChatGPTUser();
     const isDevelopment = typeof process === "undefined" || process.env.NODE_ENV !== "production";
     const fallbackEmail = isDevelopment && typeof process !== "undefined" ? process.env.FEEDBACKOS_DEV_USER_EMAIL ?? "" : "";
@@ -23,7 +31,6 @@ export async function GET(request: Request) {
     }
 
     const token = await createSessionToken(sessionUser);
-    const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
     return new Response(
       JSON.stringify({
         user: { displayName: sessionUser.displayName, email: sessionUser.email },
@@ -34,7 +41,7 @@ export async function GET(request: Request) {
         headers: {
           "content-type": "application/json",
           "cache-control": "private, no-store",
-          "set-cookie": `${sessionCookieName}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${sessionMaxAgeSeconds}${secure}`,
+          "set-cookie": sessionCookieHeader(request, token),
         },
       },
     );
