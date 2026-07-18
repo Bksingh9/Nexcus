@@ -21,6 +21,7 @@ This review covers the server-backed dashboard, account authentication, PostgreS
 - `pnpm test`: 4 tests passed.
 - `pnpm typecheck`: passed.
 - `pnpm lint`: passed.
+- `pnpm audit --audit-level high`: passed; full audit reports no known vulnerabilities after the workspace overrides.
 - `pnpm build`: passed.
 - Built-server smoke test: passed.
 - Local production-server smoke: health 200, home 200, readiness correctly fails without a database, and the API smoke suite passed.
@@ -29,6 +30,7 @@ This review covers the server-backed dashboard, account authentication, PostgreS
 ## Review Limits
 
 - CodeRabbit was not executed because the Windows workspace has no `coderabbit` executable and WSL is not installed. This is an environment limitation, not a CodeRabbit approval.
+- Codex Security's repository-wide preflight returned `incomplete` because delegated review workers are unavailable in this session. The local security gate and targeted tests are not an exhaustive Codex Security scan and must not be represented as one.
 - ChatGPT identity is an optional trusted-ingress path. Standalone Render deployments use the Nexcus email/password account flow; production email verification, password reset, and abuse monitoring still need provider configuration before broad public launch.
 - OAuth integrations, billing, Twilio delivery, outbound webhooks, and retention jobs are contracts/UI surfaces until provider credentials and server-side delivery workers are configured. No integration secret is stored in the browser.
 - A durable public deployment still requires Render service creation, managed PostgreSQL/Redis provisioning, real secret values, backup/restore validation, Hub/Cube wiring, and staging acceptance.
