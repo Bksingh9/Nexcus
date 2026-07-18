@@ -1,0 +1,16 @@
+reviews:
+  profile: assertive
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+
+path_filters:
+  - "!dist/**"
+  - "!node_modules/**"
+  - "!outputs/**"
+
+instructions: |
+  Prioritize security, tenant isolation, privacy, and billing correctness.
+  Flag any server-side route that trusts workspace IDs, survey IDs, respondent IDs, or webhook payloads without authorization/signature checks.
+  Flag any browser bundle that contains secrets or server-only integration tokens.
+  Flag XSS, CSV injection, unsafe file upload, unbounded rate limit, Twilio consent, STOP handling, and AI prompt/data isolation issues.

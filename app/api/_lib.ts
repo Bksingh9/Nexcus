@@ -52,7 +52,11 @@ async function runtimeSecret(name: string) {
     // Local Node processes do not provide the workers module.
   }
 
-  return typeof process !== "undefined" ? process.env[name] ?? "" : "";
+  if (typeof process === "undefined") return "";
+  if (name === "FEEDBACKOS_SESSION_SECRET") {
+    return process.env.FEEDBACKOS_SESSION_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
+  }
+  return process.env[name] ?? "";
 }
 
 function bytesToBase64Url(bytes: Uint8Array) {
@@ -225,13 +229,12 @@ export function routeError(error: unknown) {
     error instanceof Error && error.cause instanceof Error ? error.cause.message : "";
   const combined = `${message}\n${detail}`;
 
-  if (combined.includes("Cloudflare D1 binding `DB` is unavailable")) {
+  if (combined.includes("DATABASE_URL is not configured") || combined.includes("Cloudflare D1 binding `DB` is unavailable")) {
     return {
       status: 503,
       body: {
         error: "database_unavailable",
-        message:
-          "The API is built, but the D1 database binding is not attached in this environment yet.",
+        message: "The API database is not configured in this environment.",
       },
     };
   }

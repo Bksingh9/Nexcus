@@ -1,18 +1,27 @@
-import { drizzle } from "drizzle-orm/d1";
+import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
 import * as schema from "./schema";
 
-export async function getDb() {
-  try {
-    const { env } = await import("cloudflare:workers");
-    if (!env.DB) {
-      throw new Error("Cloudflare D1 binding `DB` is unavailable.");
-    }
-    return drizzle(env.DB, { schema });
-  } catch (error) {
-    throw new Error(
-      "Cloudflare D1 binding `DB` is unavailable. Set the `d1` field in .openai/hosting.json to `DB` or let your control plane inject the real binding values before using the database."
-      ,
-      { cause: error },
-    );
+let client: ReturnType<typeof postgres> | undefined;
+let database: ReturnType<typeof drizzle<typeof schema>> | undefined;
+
+function databaseUrl() {
+  const value = typeof process !== "undefined" ? process.env.DATABASE_URL?.trim() : "";
+  if (!value) {
+    throw new Error("DATABASE_URL is not configured. Nexcus production requires PostgreSQL.");
   }
+  return value;
+}
+
+export function getDb() {
+  if (!database) {
+    client ??= postgres(databaseUrl(), {
+      max: Number(process.env.DATABASE_POOL_MAX ?? 10),
+      idle_timeout: 20,
+      connect_timeout: 10,
+      prepare: false,
+    });
+    database = drizzle(client, { schema });
+  }
+  return database;
 }

@@ -1,9 +1,9 @@
 import { sql } from "drizzle-orm";
-import { integer, pgTable, text } from "drizzle-orm/pg-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-// PostgreSQL is the production schema. JSON stays text for compatibility with
-// the public SDK payloads and to keep migrations predictable across upgrades.
-export const surveys = pgTable("surveys", {
+// Kept only for the legacy Cloudflare worker entrypoint. Render and other
+// Node hosts use db/schema.ts and PostgreSQL instead.
+export const surveys = sqliteTable("surveys", {
   id: text("id").primaryKey(),
   workspaceId: text("workspace_id").notNull().default("default-workspace"),
   name: text("name").notNull(),
@@ -20,7 +20,7 @@ export const surveys = pgTable("surveys", {
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const respondents = pgTable("respondents", {
+export const respondents = sqliteTable("respondents", {
   id: text("id").primaryKey(),
   workspaceId: text("workspace_id").notNull().default("default-workspace"),
   email: text("email").notNull().default(""),
@@ -30,7 +30,7 @@ export const respondents = pgTable("respondents", {
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const responses = pgTable("responses", {
+export const responses = sqliteTable("responses", {
   id: text("id").primaryKey(),
   workspaceId: text("workspace_id").notNull().default("default-workspace"),
   surveyId: text("survey_id").notNull().references(() => surveys.id),
@@ -44,7 +44,7 @@ export const responses = pgTable("responses", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const integrationEvents = pgTable("integration_events", {
+export const integrationEvents = sqliteTable("integration_events", {
   id: text("id").primaryKey(),
   workspaceId: text("workspace_id").notNull().default("default-workspace"),
   integration: text("integration").notNull(),
@@ -55,7 +55,7 @@ export const integrationEvents = pgTable("integration_events", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const sdkEvents = pgTable("sdk_events", {
+export const sdkEvents = sqliteTable("sdk_events", {
   id: text("id").primaryKey(),
   workspaceId: text("workspace_id").notNull().default("default-workspace"),
   eventType: text("event_type").notNull(),
@@ -65,7 +65,7 @@ export const sdkEvents = pgTable("sdk_events", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const auditLogs = pgTable("audit_logs", {
+export const auditLogs = sqliteTable("audit_logs", {
   id: text("id").primaryKey(),
   workspaceId: text("workspace_id").notNull().default("default-workspace"),
   action: text("action").notNull(),

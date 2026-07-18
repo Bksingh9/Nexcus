@@ -1,0 +1,159 @@
+version: 2.1
+
+executors:
+  node_executor:
+    docker:
+      - image: cimg/node:22.13
+    resource_class: medium
+
+commands:
+  enable_pnpm:
+    steps:
+      - run:
+          name: Enable pnpm
+          command: |
+            corepack enable
+            pnpm config set store-dir ~/.local/share/pnpm/store
+  restore_pnpm_cache:
+    steps:
+      - restore_cache:
+          keys:
+            - v1-pnpm-store-{{ checksum "pnpm-lock.yaml" }}
+  save_pnpm_cache:
+    steps:
+      - save_cache:
+          key: v1-pnpm-store-{{ checksum "pnpm-lock.yaml" }}
+          paths:
+            - ~/.local/share/pnpm/store
+
+jobs:
+  install:
+    executor: node_executor
+    steps:
+      - checkout
+      - enable_pnpm
+      - restore_pnpm_cache
+      - run:
+          name: Install dependencies
+          command: pnpm install --frozen-lockfile
+      - save_pnpm_cache
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+
+  lint_typecheck:
+    executor: node_executor
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Lint
+          command: pnpm lint
+      - run:
+          name: Typecheck
+          command: pnpm typecheck
+      - run:
+          name: Test
+          command: pnpm test
+
+  build:
+    executor: node_executor
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Build
+          command: pnpm build
+
+  security:
+    executor: node_executor
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Dependency audit
+          command: pnpm audit --audit-level high
+      - run:
+          name: Repository security gate
+          command: pnpm security:gate
+      - run:
+          name: Security regression tests
+          command: pnpm test
+
+  deploy_production:
+    executor: node_executor
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Verify production deployment
+          command: pnpm deploy:production
+
+workflows:
+  validate:
+    jobs:
+      - install
+      - lint_typecheck:
+          requires:
+            - install
+      - security:
+          requires:
+            - install
+      - build:
+          requires:
+            - lint_typecheck
+            - security
+
+  release:
+    jobs:
+      - install:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+      - lint_typecheck:
+          requires:
+            - install
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+      - security:
+          requires:
+            - install
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+      - build:
+          requires:
+            - lint_typecheck
+            - security
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+      - approve_production:
+          type: approval
+          requires:
+            - build
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+      - deploy_production:
+          requires:
+            - approve_production
+          context:
+            - production
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/

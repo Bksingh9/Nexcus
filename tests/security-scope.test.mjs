@@ -17,7 +17,7 @@ async function read(path) {
 
 test("sensitive tables carry workspace scope", async () => {
   const schema = await read("db/schema.ts");
-  const migration = await read("drizzle/0001_workspace_scope.sql");
+  const migration = await read("db/migrations/001_initial.sql");
 
   for (const table of [
     "surveys",
@@ -31,7 +31,7 @@ test("sensitive tables carry workspace scope", async () => {
   }
 
   assert.equal(schema.match(/workspaceId: text\("workspace_id"\)/g)?.length, 6);
-  assert.equal(migration.match(/ADD `workspace_id`/g)?.length, 6);
+  assert.equal(migration.match(/workspace_id TEXT NOT NULL/g)?.length, 6);
 });
 
 test("workspace-scoped APIs require and apply tenant scope", async () => {

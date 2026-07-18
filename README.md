@@ -44,8 +44,10 @@ The public SDK uses an opaque `environmentId` for published survey configuration
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and fill in production values when wiring real integrations.
+Copy `.env.example` to `.env` for local work. For a real deployment, use [`.env.production.example`](.env.production.example) and a secret manager. Never put provider tokens or database credentials in a `NEXT_PUBLIC_*` value.
 
 ## Production Notes
 
-Production requires a Cloudflare D1 binding named `DB`, the migrations in `drizzle/`, and `FEEDBACKOS_SESSION_SECRET`. Integration credentials and webhook signing secrets belong in server-side environment bindings. The current integration API prepares signed-event payloads; provider-specific OAuth, billing, Twilio consent workflows, and outbound delivery still need their provider credentials and callback configuration before they can be enabled.
+Production uses PostgreSQL and Redis/Valkey. Run `pnpm db:migrate` before serving traffic, then use `/api/health` and `/api/ready` as deployment checks. The supported container path is documented in [`docs/deployment.md`](docs/deployment.md) and [`render.yaml`](render.yaml). The old Cloudflare D1 worker schema remains only as a compatibility path; it is not the production default.
+
+GitHub Pages is limited to the public landing/source surface at [bksingh9.github.io/Nexcus](https://bksingh9.github.io/Nexcus/). It is not the multi-user SaaS runtime.

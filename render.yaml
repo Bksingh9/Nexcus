@@ -1,0 +1,50 @@
+services:
+  - type: web
+    name: nexcus
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: WEBAPP_URL
+        sync: false
+      - key: NEXTAUTH_URL
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nexcus-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: nexcus-redis
+          property: connectionString
+      - key: NEXTAUTH_SECRET
+        generateValue: true
+      - key: ENCRYPTION_KEY
+        generateValue: true
+      - key: CRON_SECRET
+        generateValue: true
+      - key: FEEDBACKOS_SESSION_SECRET
+        generateValue: true
+      - key: HUB_API_KEY
+        sync: false
+      - key: CUBEJS_API_SECRET
+        sync: false
+      - key: HUB_API_URL
+        sync: false
+      - key: CUBEJS_API_URL
+        sync: false
+
+  - type: redis
+    name: nexcus-redis
+    plan: starter
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
+
+databases:
+  - name: nexcus-postgres
+    plan: starter

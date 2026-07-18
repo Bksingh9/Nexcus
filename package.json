@@ -13,13 +13,16 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.mjs",
+    "security:gate": "node scripts/security-gate.mjs",
     "smoke": "node scripts/smoke.mjs",
+    "db:migrate": "node scripts/migrate.mjs",
     "deploy:production": "node scripts/deploy-production.mjs",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",
     "next": "16.2.6",
+    "postgres": "3.4.7",
     "react": "19.2.6",
     "react-dom": "19.2.6"
   },
