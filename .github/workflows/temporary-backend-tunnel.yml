@@ -101,7 +101,16 @@ jobs:
           exit 1
 
       - name: Verify PostgreSQL readiness
-        run: curl --fail --silent --show-error http://127.0.0.1:3000/api/ready
+        id: readiness
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(curl --silent --show-error http://127.0.0.1:3000/api/ready || true)"
+          echo "body=$body" >> "$GITHUB_OUTPUT"
+          if [[ "$body" != *'"status":"ready"'* ]]; then
+            exit 1
+          fi
 
       - name: Start Cloudflare quick tunnel
         id: tunnel
@@ -130,14 +139,19 @@ jobs:
         uses: actions/github-script@v7
         env:
           TUNNEL_URL: ${{ steps.tunnel.outputs.url }}
+          READINESS_OK: ${{ steps.readiness.outcome == 'success' }}
+          READINESS_BODY: ${{ steps.readiness.outputs.body }}
         with:
           script: |
+            const ready = process.env.READINESS_OK === "true";
             const deployment = await github.rest.repos.createDeployment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: context.sha,
               environment: "temporary-backend-tunnel",
-              description: "Ephemeral GitHub runner staging tunnel; data is discarded when the job ends.",
+              description: ready
+                ? "Ephemeral GitHub runner staging tunnel; data is discarded when the job ends."
+                : "Temporary tunnel withheld because PostgreSQL readiness failed.",
               auto_merge: false,
               required_contexts: [],
             });
@@ -145,18 +159,24 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               deployment_id: deployment.data.id,
-              state: "success",
+              state: ready ? "success" : "failure",
               environment_url: process.env.TUNNEL_URL,
               log_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-              description: "Temporary tunnel is available until this workflow ends.",
+              description: ready
+                ? "Temporary tunnel is available until this workflow ends."
+                : `Redacted readiness response: ${process.env.READINESS_BODY}`,
             });
-            await core.summary
-              .addHeading("Temporary Nexcus backend")
-              .addLink(process.env.TUNNEL_URL, process.env.TUNNEL_URL)
-              .addRaw("\n\nThis URL is ephemeral. PostgreSQL and Valkey run only for this GitHub Actions job; all data is discarded when it ends.")
-              .write();
+            const summary = core.summary.addHeading("Temporary Nexcus backend");
+            if (ready) {
+              summary.addLink(process.env.TUNNEL_URL, process.env.TUNNEL_URL);
+              summary.addRaw("\n\nThis URL is ephemeral. PostgreSQL and Valkey run only for this GitHub Actions job; all data is discarded when it ends.");
+            } else {
+              summary.addRaw(`\n\nThe tunnel was not published because PostgreSQL readiness failed. Redacted response: ${process.env.READINESS_BODY}`);
+            }
+            await summary.write();
 
       - name: Keep tunnel available
+        if: steps.readiness.outcome == 'success'
         shell: bash
         env:
           DURATION_MINUTES: ${{ inputs.duration_minutes || 300 }}
