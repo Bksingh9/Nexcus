@@ -262,7 +262,13 @@ export function routeError(error: unknown) {
     };
   }
 
-  return { status: 500, body: { error: "server_error", message } };
+  return {
+    status: 500,
+    body: {
+      error: "server_error",
+      message: typeof process !== "undefined" && process.env.NODE_ENV === "production" ? "Unexpected server error." : message,
+    },
+  };
 }
 
 export async function readJsonObject(request: Request, maxBytes = MAX_JSON_BODY_BYTES) {

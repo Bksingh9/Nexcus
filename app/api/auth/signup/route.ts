@@ -31,13 +31,20 @@ export async function POST(request: Request) {
     if (existing.length) return Response.json({ error: "account_exists" }, { status: 409 });
 
     const workspaceId = await workspaceIdForEmail(email);
-    await db.insert(accounts).values({
-      id: makeId("account"),
-      workspaceId,
-      email,
-      displayName,
-      passwordHash: await hashPassword(password),
-    });
+    try {
+      await db.insert(accounts).values({
+        id: makeId("account"),
+        workspaceId,
+        email,
+        displayName,
+        passwordHash: await hashPassword(password),
+      });
+    } catch (error) {
+      if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
+        return Response.json({ error: "account_exists" }, { status: 409 });
+      }
+      throw error;
+    }
 
     const token = await createSessionToken({ email, displayName });
     return Response.json(
