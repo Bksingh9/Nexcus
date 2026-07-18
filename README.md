@@ -49,6 +49,6 @@ Copy `.env.example` to `.env` for local work. For a real deployment, use [`.env.
 
 ## Production Notes
 
-Production uses PostgreSQL and Redis/Valkey. Run `pnpm db:migrate` before serving traffic, then use `/api/health` and `/api/ready` as deployment checks. The supported container path is documented in [`docs/deployment.md`](docs/deployment.md) and [`render.yaml`](render.yaml). The old Cloudflare D1 worker schema remains only as a compatibility path; it is not the production default.
+Production uses PostgreSQL and Redis/Valkey. Run `pnpm db:migrate` before serving traffic, then use `/api/health` and `/api/ready` as deployment checks. The supported container path is documented in [`docs/deployment.md`](docs/deployment.md) and [`render.yaml`](render.yaml). The old Cloudflare worker/schema files are archived build references; the production API requires PostgreSQL.
 
 GitHub Pages is limited to the public landing/source surface at [bksingh9.github.io/Nexcus](https://bksingh9.github.io/Nexcus/). It is not the multi-user SaaS runtime.

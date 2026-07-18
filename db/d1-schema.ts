@@ -1,8 +1,8 @@
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-// Kept only for the legacy Cloudflare worker entrypoint. Render and other
-// Node hosts use db/schema.ts and PostgreSQL instead.
+// Archived Cloudflare schema reference. Production Nexcus runs on Node/PostgreSQL
+// and the production client imports db/schema.ts instead.
 export const surveys = sqliteTable("surveys", {
   id: text("id").primaryKey(),
   workspaceId: text("workspace_id").notNull().default("default-workspace"),
