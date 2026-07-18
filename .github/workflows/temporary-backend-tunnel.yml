@@ -11,6 +11,7 @@ on:
   push:
     paths:
       - ".github/workflows/temporary-backend-tunnel.yml"
+      - "app/api/ready/route.ts"
 
 permissions:
   contents: read
