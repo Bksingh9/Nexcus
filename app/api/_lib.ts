@@ -44,14 +44,6 @@ export function sanitizeScopeValue(value: unknown) {
 }
 
 async function runtimeSecret(name: string) {
-  try {
-    const { env } = await import("cloudflare:workers");
-    const value = env[name];
-    if (typeof value === "string" && value) return value;
-  } catch {
-    // Local Node processes do not provide the workers module.
-  }
-
   if (typeof process === "undefined") return "";
   if (name === "FEEDBACKOS_SESSION_SECRET") {
     return process.env.FEEDBACKOS_SESSION_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";

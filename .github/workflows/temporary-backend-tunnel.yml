@@ -12,6 +12,8 @@ on:
     paths:
       - ".github/workflows/temporary-backend-tunnel.yml"
       - "app/api/ready/route.ts"
+      - "app/api/_lib.ts"
+      - "vite.config.ts"
 
 permissions:
   contents: read

@@ -8,6 +8,7 @@ const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   "00000000-0000-4000-8000-000000000000";
 
 const { d1, r2 } = hostingConfig;
+const cloudflareBuild = process.env.NEXCUS_CLOUDFLARE_BUILD === "1";
 
 const localBindingConfig = {
   main: "./worker/index.ts",
@@ -35,9 +36,13 @@ export default defineConfig({
   plugins: [
     vinext(),
     sites(),
-    cloudflare({
-      viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
-      config: localBindingConfig,
-    }),
+    ...(cloudflareBuild
+      ? [
+          cloudflare({
+            viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
+            config: localBindingConfig,
+          }),
+        ]
+      : []),
   ],
 });
