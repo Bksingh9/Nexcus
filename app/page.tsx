@@ -896,6 +896,11 @@ export default function Home() {
     setToast("Workspace cleared from this browser view. Server data remains governed by the workspace API.");
   }
 
+  async function signOut() {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => null);
+    window.location.reload();
+  }
+
   const nav: { key: ViewKey; label: string }[] = [
     { key: "command", label: "Command" },
     { key: "builder", label: "Builder" },
@@ -949,6 +954,9 @@ export default function Home() {
             <h2>{viewTitles[activeView]}</h2>
           </div>
           <div className="topbar-actions">
+            <button className="button secondary" onClick={signOut} type="button">
+              Sign out
+            </button>
             <button className="button secondary" onClick={resetDemo} type="button">
               Clear view
             </button>

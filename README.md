@@ -7,6 +7,7 @@ Nexcus is a clean-room, Formbricks-style product feedback platform. It provides 
 - Product command center with metrics and launch path.
 - Survey builder with official-style question blocks, status, channel, targeting, hidden fields, and runtime preview.
 - Live collection flow that sends responses to the authenticated API and updates analytics from server data.
+- Public email/password account creation with a private workspace and signed HttpOnly sessions.
 - Response inbox with tag filtering and CSV export protection.
 - Insight readiness that stays empty until real response text exists.
 - Integration setup contracts for Webhooks, Airtable, Google Sheets, HubSpot, Notion, Slack, Zapier, Make, n8n, Activepieces, and WordPress.

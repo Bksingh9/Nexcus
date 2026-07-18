@@ -76,3 +76,17 @@ test("public collection is bounded and the SDK does not interpolate HTML", async
   assert.doesNotMatch(sdk, /shell\.innerHTML/);
   assert.match(sdk, /textContent/);
 });
+
+test("account auth stores verifiers and signs HttpOnly sessions", async () => {
+  const signup = await read("app/api/auth/signup/route.ts");
+  const login = await read("app/api/auth/login/route.ts");
+  const authLib = await read("app/api/auth/_lib.ts");
+  const helper = await read("app/api/_lib.ts");
+
+  assert.match(signup, /passwordHash: await hashPassword\(password\)/);
+  assert.match(login, /verifyPassword\(password, account\.passwordHash\)/);
+  assert.match(authLib, /PBKDF2_ITERATIONS/);
+  assert.match(authLib, /constantTimeEqual/);
+  assert.match(helper, /HttpOnly/);
+  assert.match(helper, /SameSite=Lax/);
+});
