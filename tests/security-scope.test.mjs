@@ -31,7 +31,7 @@ test("sensitive tables carry workspace scope", async () => {
     assert.match(schema, new RegExp(`export const ${table}`));
   }
 
-  assert.equal(schema.match(/workspaceId: text\("workspace_id"\)/g)?.length, 7);
+  assert.equal(schema.match(/workspaceId: text\("workspace_id"\)/g)?.length, 8);
   assert.equal(migration.match(/workspace_id TEXT NOT NULL/g)?.length, 7);
 });
 
@@ -90,3 +90,4 @@ test("account auth stores verifiers and signs HttpOnly sessions", async () => {
   assert.match(helper, /HttpOnly/);
   assert.match(helper, /SameSite=Lax/);
 });
+
