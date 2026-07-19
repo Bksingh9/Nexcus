@@ -650,7 +650,759 @@ export default function Home() {
   }
 
   function updateQuestion(questionId: string, patch: Partial<Question>) {
-    if (!activeSurv…6633 tokens truncated…ssName="runtime-trigger">{activeSurvey.audience}</p>
+    if (!activeSurvey) return;
+    const nextSurvey: Survey = {
+      ...activeSurvey,
+      questions: activeSurvey.questions.map((question) =>
+        question.id === questionId ? { ...question, ...patch } : question,
+      ),
+    };
+    setWorkspace((current) => ({
+      ...current,
+      surveys: current.surveys.map((survey) =>
+        survey.id === activeSurvey.id ? nextSurvey : survey,
+      ),
+    }));
+    void persistSurvey(nextSurvey);
+  }
+
+  function addQuestion(type: QuestionType) {
+    if (!activeSurvey) return;
+    const question: Question = {
+      id: makeId("q"),
+      type,
+      title: `New ${questionTypeLabels[type]} question`,
+      description: "",
+      required: false,
+      options: type === "single" || type === "multi" ? ["Option A", "Option B"] : [],
+    };
+    setWorkspace((current) => ({
+      ...current,
+      surveys: current.surveys.map((survey) =>
+        survey.id === activeSurvey.id ? { ...survey, questions: [...survey.questions, question] } : survey,
+      ),
+    }));
+    setToast(`${questionTypeLabels[type]} question added.`);
+  }
+
+  function removeQuestion(questionId: string) {
+    if (!activeSurvey || activeSurvey.questions.length <= 1) return;
+    setWorkspace((current) => ({
+      ...current,
+      surveys: current.surveys.map((survey) =>
+        survey.id === activeSurvey.id
+          ? { ...survey, questions: survey.questions.filter((question) => question.id !== questionId) }
+          : survey,
+      ),
+    }));
+  }
+
+  async function createSurvey() {
+    const survey: Survey = {
+      id: makeId("survey"),
+      name: "New product feedback survey",
+      slug: `feedback-${workspace.surveys.length + 1}`,
+      channel: "link",
+      status: "draft",
+      audience: "All active users",
+      trigger: "Manual link share",
+      completion: "Thanks for the feedback.",
+      questions: [
+        {
+          id: makeId("q"),
+          type: "csat",
+          title: "How satisfied are you with this experience?",
+          description: "1 is poor and 5 is excellent.",
+          required: true,
+          options: [],
+        },
+      ],
+    };
+    const response = await fetch("/api/surveys", {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(survey),
+    }).catch(() => null);
+    if (!response?.ok) {
+      setToast("Sign in and connect the database before creating a survey.");
+      return;
+    }
+    const data = (await response.json()) as { survey?: Survey };
+    const savedSurvey = data.survey ?? survey;
+    setWorkspace((current) => ({ ...current, surveys: [...current.surveys, savedSurvey] }));
+    setActiveSurveyId(savedSurvey.id);
+    setActiveView("builder");
+    setToast("New survey created.");
+  }
+
+  async function duplicateSurvey() {
+    if (!activeSurvey) return;
+    const survey: Survey = {
+      ...activeSurvey,
+      id: makeId("survey"),
+      name: `${activeSurvey.name} copy`,
+      slug: `${activeSurvey.slug}-copy`,
+      status: "draft",
+      questions: activeSurvey.questions.map((question) => ({ ...question, id: makeId("q") })),
+    };
+    const response = await fetch("/api/surveys", {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(survey),
+    }).catch(() => null);
+    if (!response?.ok) {
+      setToast("Sign in and connect the database before duplicating a survey.");
+      return;
+    }
+    const data = (await response.json()) as { survey?: Survey };
+    const savedSurvey = data.survey ?? survey;
+    setWorkspace((current) => ({ ...current, surveys: [...current.surveys, savedSurvey] }));
+    setActiveSurveyId(savedSurvey.id);
+    setToast("Survey duplicated into draft.");
+  }
+
+  async function submitResponse() {
+    if (!activeSurvey) return;
+    const respondent =
+      activeRespondent ??
+      ({
+        id: makeId("contact"),
+        name: "Anonymous",
+        email: "",
+        phone: "",
+        plan: "Unknown",
+        country: "",
+        consentSms: false,
+        consentWhatsapp: false,
+      } satisfies Respondent);
+    const answers = activeSurvey.questions.reduce<Record<string, string>>((acc, question) => {
+      acc[question.id] = draftAnswers[question.id] || (question.type === "consent" ? "No follow-up" : "");
+      return acc;
+    }, {});
+    const score = getFirstScoredAnswer(activeSurvey, answers);
+    const tags = score !== null && score <= 6 ? ["low-score", "needs-follow-up"] : ["new-response"];
+    const response: ResponseRecord = {
+      id: makeId("res"),
+      surveyId: activeSurvey.id,
+      respondentId: respondent.id,
+      status: "completed",
+      score,
+      answers,
+      tags,
+      source: activeSurvey.channel === "in_app" ? "SDK widget" : "Survey link",
+      createdAt: new Date().toISOString(),
+    };
+    const serverResponse = await fetch("/api/responses", {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        surveyId: activeSurvey.id,
+        status: "completed",
+        score,
+        answers,
+        source: "dashboard-preview",
+        respondent: {
+          email: respondent.email,
+          name: respondent.name,
+          attributes: {
+            phone: respondent.phone,
+            plan: respondent.plan,
+            country: respondent.country,
+            consentSms: respondent.consentSms,
+            consentWhatsapp: respondent.consentWhatsapp,
+          },
+        },
+      }),
+    }).catch(() => null);
+    if (!serverResponse?.ok) {
+      setToast("Sign in and connect the database before capturing a response.");
+      return;
+    }
+    const serverData = (await serverResponse.json()) as { response?: ResponseRecord };
+    const savedResponse = serverData.response ?? response;
+    const savedRespondent = { ...respondent, id: savedResponse.respondentId };
+    setWorkspace((current) => ({
+      ...current,
+      respondents: current.respondents.some((item) => item.id === savedRespondent.id)
+        ? current.respondents
+        : [savedRespondent, ...current.respondents],
+      responses: [savedResponse, ...current.responses],
+      auditLogs: [
+        {
+          id: makeId("audit"),
+          action: "response.created",
+          actor: respondent.name,
+          detail: `${activeSurvey.name} submitted with score ${score ?? "n/a"}`,
+          createdAt: new Date().toISOString(),
+        },
+        ...current.auditLogs,
+      ],
+    }));
+    setDraftAnswers({});
+    setToast("Response captured, analytics updated, and events queued.");
+  }
+
+  function testIntegration(key: IntegrationKey) {
+    const event = integrationCopy[key].event;
+    setWorkspace((current) => ({
+      ...current,
+      integrations: current.integrations.map((integration) =>
+        integration.key === key
+          ? {
+              ...integration,
+              enabled: false,
+              status: "needs-setup",
+              lastTest: `Payload prepared: ${event}`,
+            }
+          : integration,
+      ),
+      auditLogs: [
+        {
+          id: makeId("audit"),
+          action: "integration.payload_prepared",
+          actor: "Founder",
+          detail: `${integrationCopy[key].name} payload prepared for ${event}`,
+          createdAt: new Date().toISOString(),
+        },
+        ...current.auditLogs,
+      ],
+    }));
+    setToast(`${integrationCopy[key].name} payload prepared. Add credentials before delivery.`);
+  }
+
+  function updateIntegrationEndpoint(key: IntegrationKey, endpoint: string) {
+    setWorkspace((current) => ({
+      ...current,
+      integrations: current.integrations.map((integration) =>
+        integration.key === key ? { ...integration, endpoint } : integration,
+      ),
+    }));
+  }
+
+  function changePlan(plan: PlanKey) {
+    setWorkspace((current) => ({ ...current, plan }));
+    addAudit("billing.plan_changed", `Plan changed to ${planCatalog[plan].name}`);
+    setToast(`${planCatalog[plan].name} plan selected.`);
+  }
+
+  async function startCheckout(plan: Extract<PlanKey, "launch" | "team" | "business">) {
+    setToast(`Opening secure checkout for the ${planCatalog[plan].name} plan...`);
+    const response = await fetch("/api/billing/checkout", {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ plan }),
+    }).catch(() => null);
+    const payload = (await response?.json().catch(() => ({}))) as { url?: string; message?: string };
+    if (!response?.ok || !payload.url) {
+      setToast(payload.message ?? "Billing is not configured for this plan yet.");
+      return;
+    }
+    window.location.assign(payload.url);
+  }
+
+  async function openBillingPortal() {
+    const response = await fetch("/api/billing/portal", {
+      method: "POST",
+      credentials: "include",
+    }).catch(() => null);
+    const payload = (await response?.json().catch(() => ({}))) as { url?: string; message?: string };
+    if (!response?.ok || !payload.url) {
+      setToast(payload.message ?? "Billing portal is unavailable until a subscription exists.");
+      return;
+    }
+    window.location.assign(payload.url);
+  }
+
+  function exportCsv() {
+    const headers = ["id", "survey", "respondent", "score", "status", "tags", "created_at"];
+    const rows = filteredResponses.map((response) => {
+      const survey = workspace.surveys.find((item) => item.id === response.surveyId);
+      const respondent = workspace.respondents.find((item) => item.id === response.respondentId);
+      return [
+        response.id,
+        survey?.name ?? "Unknown",
+        respondent?.email ?? "anonymous",
+        String(response.score ?? ""),
+        response.status,
+        response.tags.join("|"),
+        response.createdAt,
+      ].map(escapeCsv);
+    });
+    const csv = [headers.map(escapeCsv), ...rows].map((row) => row.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "feedbackos-responses.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+    setToast("CSV export generated with spreadsheet injection protection.");
+  }
+
+  function resetDemo() {
+    setWorkspace(defaultWorkspace);
+    setActiveSurveyId(defaultWorkspace.surveys[0]?.id ?? "");
+    setSelectedRespondentId("");
+    setDraftAnswers({});
+    setToast("Workspace cleared from this browser view. Server data remains governed by the workspace API.");
+  }
+
+  async function signOut() {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => null);
+    window.location.reload();
+  }
+
+  const nav: { key: ViewKey; label: string }[] = [
+    { key: "command", label: "Command" },
+    { key: "builder", label: "Builder" },
+    { key: "collect", label: "Collect" },
+    { key: "responses", label: "Responses" },
+    { key: "insights", label: "Insights" },
+    { key: "integrations", label: "Integrations" },
+    { key: "security", label: "Security" },
+    { key: "pricing", label: "Pricing" },
+    { key: "launch", label: "Launch" },
+  ];
+
+  return (
+    <main className="app-shell">
+      <aside className="sidebar">
+        <div className="brand-lockup">
+          <div className="brand-mark">N</div>
+          <div>
+            <p className="eyebrow">Nexcus</p>
+            <h1>Feedback Ops</h1>
+          </div>
+        </div>
+        <nav className="nav-list" aria-label="Product sections">
+          {nav.map((item) => (
+            <button
+              className={activeView === item.key ? "nav-item active" : "nav-item"}
+              key={item.key}
+              onClick={() => setActiveView(item.key)}
+              type="button"
+            >
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="plan-meter">
+          <div className="spread">
+            <span>{planCatalog[workspace.plan].name}</span>
+            <span>{usageLimit === "custom" ? "Custom" : `${workspace.responses.length}/${usageLimit}`}</span>
+          </div>
+          <div className="meter">
+            <span style={{ width: `${usagePercent}%` }} />
+          </div>
+          <p>{workspace.overageEnabled ? "Dynamic overage enabled" : "Hard quota enabled"}</p>
+        </div>
+      </aside>
+
+      <section className="workspace">
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">Clean-room Formbricks-style MVP</p>
+            <h2>{viewTitles[activeView]}</h2>
+          </div>
+          <div className="topbar-actions">
+            <button className="button secondary" onClick={signOut} type="button">
+              Sign out
+            </button>
+            <button className="button secondary" onClick={resetDemo} type="button">
+              Clear view
+            </button>
+            <button className="button primary" onClick={createSurvey} type="button">
+              New survey
+            </button>
+          </div>
+        </header>
+
+        <div className="toast" role="status">
+          {toast}
+        </div>
+
+        {activeView === "command" && (
+          <CommandCenter
+            activeSurvey={activeSurvey}
+            responses={workspace.responses}
+            surveys={workspace.surveys}
+            nps={calculateNps(workspace.responses)}
+            average={averageScore(workspace.responses)}
+            setActiveView={setActiveView}
+          />
+        )}
+
+        {activeView === "builder" && activeSurvey && (
+          <BuilderView
+            addQuestion={addQuestion}
+            activeSurvey={activeSurvey}
+            duplicateSurvey={duplicateSurvey}
+            removeQuestion={removeQuestion}
+            setActiveSurveyId={setActiveSurveyId}
+            surveys={workspace.surveys}
+            updateQuestion={updateQuestion}
+            updateSurvey={updateSurvey}
+          />
+        )}
+
+        {activeView === "collect" && activeSurvey && (
+          <CollectView
+            activeRespondent={activeRespondent}
+            activeSurvey={activeSurvey}
+            draftAnswers={draftAnswers}
+            environmentId={workspace.environmentId}
+            publicClientKey={workspace.publicClientKey}
+            respondents={workspace.respondents}
+            selectedRespondentId={selectedRespondentId}
+            setDraftAnswers={setDraftAnswers}
+            setSelectedRespondentId={setSelectedRespondentId}
+            submitResponse={submitResponse}
+          />
+        )}
+
+        {activeView === "responses" && (
+          <ResponsesView
+            activeResponseTag={activeResponseTag}
+            allTags={allTags}
+            exportCsv={exportCsv}
+            responses={filteredResponses}
+            respondents={workspace.respondents}
+            setActiveResponseTag={setActiveResponseTag}
+            surveys={workspace.surveys}
+          />
+        )}
+
+        {activeView === "insights" && (
+          <InsightsView responses={workspace.responses} surveys={workspace.surveys} activeSurveyResponses={activeSurveyResponses} />
+        )}
+
+        {activeView === "integrations" && (
+          <IntegrationsView
+            integrations={workspace.integrations}
+            testIntegration={testIntegration}
+            updateIntegrationEndpoint={updateIntegrationEndpoint}
+          />
+        )}
+
+        {activeView === "security" && (
+          <SecurityView
+            auditLogs={workspace.auditLogs}
+            retentionDays={workspace.retentionDays}
+            setRetentionDays={(retentionDays) => {
+              setWorkspace((current) => ({ ...current, retentionDays }));
+              addAudit("security.retention_changed", `Retention changed to ${retentionDays} days`);
+            }}
+          />
+        )}
+
+        {activeView === "pricing" && (
+          <PricingView
+            activePlan={workspace.plan}
+            billing={workspace.billing}
+            changePlan={changePlan}
+            openBillingPortal={openBillingPortal}
+            overageEnabled={workspace.overageEnabled}
+            startCheckout={startCheckout}
+          />
+        )}
+
+        {activeView === "launch" && <LaunchView />}
+      </section>
+    </main>
+  );
+}
+
+const viewTitles: Record<ViewKey, string> = {
+  command: "Command center",
+  builder: "Survey builder",
+  collect: "Live collection",
+  responses: "Response inbox",
+  insights: "Insights engine",
+  integrations: "Plug-in integrations",
+  security: "Security and admin",
+  pricing: "Pricing and plans",
+  launch: "Launch checklist",
+};
+
+function CommandCenter({
+  activeSurvey,
+  average,
+  nps,
+  responses,
+  setActiveView,
+  surveys,
+}: {
+  activeSurvey?: Survey;
+  average: number;
+  nps: number;
+  responses: ResponseRecord[];
+  setActiveView: (view: ViewKey) => void;
+  surveys: Survey[];
+}) {
+  const published = surveys.filter((survey) => survey.status === "published").length;
+  const lowScore = responses.filter((response) => typeof response.score === "number" && response.score <= 6).length;
+  return (
+    <div className="view-grid">
+      <section className="hero-panel">
+        <div>
+          <p className="eyebrow">Founder dashboard</p>
+          <h3>Build surveys, target users, collect responses, and route feedback into your stack.</h3>
+          <p>
+            This working MVP includes survey builder, link and app survey flows, response capture,
+            analytics, pricing, security controls, and Formbricks-style integration setup. Data persists in this browser.
+          </p>
+        </div>
+        <div className="hero-actions">
+          <button className="button primary" onClick={() => setActiveView("builder")} type="button">
+            Edit survey
+          </button>
+          <button className="button secondary" onClick={() => setActiveView("collect")} type="button">
+            Capture response
+          </button>
+        </div>
+      </section>
+
+      <section className="metric-strip">
+        <Metric label="Total responses" value={String(responses.length)} detail="All workspaces" tone="blue" />
+        <Metric label="NPS" value={String(nps)} detail="Promoters minus detractors" tone="green" />
+        <Metric label="Avg score" value={String(average)} detail="Across scored answers" tone="amber" />
+        <Metric label="Follow-ups" value={String(lowScore)} detail="Low-score queue" tone="rose" />
+      </section>
+
+      <section className="two-column">
+        <div className="panel">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Active program</p>
+              <h3>{activeSurvey?.name}</h3>
+            </div>
+            <span className="badge success">{published} published</span>
+          </div>
+          <div className="timeline">
+            <div>
+              <span>1</span>
+              <p>Define segments, hidden fields, and product-event triggers.</p>
+            </div>
+            <div>
+              <span>2</span>
+              <p>Collect link, website, app, and mobile responses from real users.</p>
+            </div>
+            <div>
+              <span>3</span>
+              <p>Route responses into Slack, HubSpot, Sheets, Airtable, Notion, and automation tools.</p>
+            </div>
+          </div>
+        </div>
+        <div className="panel">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Revenue path</p>
+              <h3>Team plan is the conversion target</h3>
+            </div>
+          </div>
+          <ul className="plain-list">
+            <li>Free creates first survey and response habit.</li>
+            <li>Launch unlocks custom branding, webhooks, and SDK targeting.</li>
+            <li>Team monetizes integrations, automation, collaboration, and AI summaries.</li>
+            <li>Business and Enterprise sell governance, retention, and self-hosting.</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function Metric({
+  detail,
+  label,
+  tone,
+  value,
+}: {
+  detail: string;
+  label: string;
+  tone: "blue" | "green" | "amber" | "rose";
+  value: string;
+}) {
+  return (
+    <article className={`metric ${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <p>{detail}</p>
+    </article>
+  );
+}
+
+function BuilderView({
+  activeSurvey,
+  addQuestion,
+  duplicateSurvey,
+  removeQuestion,
+  setActiveSurveyId,
+  surveys,
+  updateQuestion,
+  updateSurvey,
+}: {
+  activeSurvey: Survey;
+  addQuestion: (type: QuestionType) => void;
+  duplicateSurvey: () => void;
+  removeQuestion: (questionId: string) => void;
+  setActiveSurveyId: (id: string) => void;
+  surveys: Survey[];
+  updateQuestion: (questionId: string, patch: Partial<Question>) => void;
+  updateSurvey: (patch: Partial<Survey>) => void;
+}) {
+  return (
+    <div className="builder-layout">
+      <section className="panel controls-panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Builder</p>
+            <h3>Survey settings</h3>
+          </div>
+          <button className="button secondary" onClick={duplicateSurvey} type="button">
+            Duplicate
+          </button>
+        </div>
+        <label className="field-label">
+          Select survey
+          <select value={activeSurvey.id} onChange={(event) => setActiveSurveyId(event.target.value)}>
+            {surveys.map((survey) => (
+              <option key={survey.id} value={survey.id}>
+                {survey.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field-label">
+          Name
+          <input value={activeSurvey.name} onChange={(event) => updateSurvey({ name: event.target.value })} />
+        </label>
+        <label className="field-label">
+          Slug
+          <input value={activeSurvey.slug} onChange={(event) => updateSurvey({ slug: event.target.value })} />
+        </label>
+        <div className="segmented" aria-label="Survey status">
+          {(["draft", "published", "paused"] as const).map((status) => (
+            <button
+              className={activeSurvey.status === status ? "selected" : ""}
+              key={status}
+              onClick={() => updateSurvey({ status })}
+              type="button"
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+        <label className="field-label">
+          Channel
+          <select
+            value={activeSurvey.channel}
+            onChange={(event) => updateSurvey({ channel: event.target.value as Survey["channel"] })}
+          >
+            <option value="link">Link</option>
+            <option value="website">Website</option>
+            <option value="in_app">In-app</option>
+            <option value="email">Email</option>
+          </select>
+        </label>
+        <label className="field-label">
+          Audience
+          <textarea value={activeSurvey.audience} onChange={(event) => updateSurvey({ audience: event.target.value })} />
+        </label>
+        <label className="field-label">
+          Trigger
+          <textarea value={activeSurvey.trigger} onChange={(event) => updateSurvey({ trigger: event.target.value })} />
+        </label>
+        <label className="field-label">
+          Completion message
+          <textarea value={activeSurvey.completion} onChange={(event) => updateSurvey({ completion: event.target.value })} />
+        </label>
+      </section>
+
+      <section className="panel builder-panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Questions</p>
+            <h3>{activeSurvey.questions.length} blocks</h3>
+          </div>
+          <select onChange={(event) => addQuestion(event.target.value as QuestionType)} value="">
+            <option value="" disabled>
+              Add block
+            </option>
+            {Object.entries(questionTypeLabels).map(([type, label]) => (
+              <option key={type} value={type}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="question-list">
+          {activeSurvey.questions.map((question, index) => (
+            <article className="question-editor" key={question.id}>
+              <div className="question-meta">
+                <span>{index + 1}</span>
+                <strong>{questionTypeLabels[question.type]}</strong>
+                <label>
+                  <input
+                    checked={question.required}
+                    onChange={(event) => updateQuestion(question.id, { required: event.target.checked })}
+                    type="checkbox"
+                  />
+                  Required
+                </label>
+                <button className="text-button" onClick={() => removeQuestion(question.id)} type="button">
+                  Remove
+                </button>
+              </div>
+              <input value={question.title} onChange={(event) => updateQuestion(question.id, { title: event.target.value })} />
+              <textarea
+                placeholder="Optional help text"
+                value={question.description}
+                onChange={(event) => updateQuestion(question.id, { description: event.target.value })}
+              />
+              {(question.type === "single" || question.type === "multi") && (
+                <label className="field-label">
+                  Options, one per line
+                  <textarea
+                    value={question.options.join("\n")}
+                    onChange={(event) =>
+                      updateQuestion(question.id, {
+                        options: event.target.value
+                          .split("\n")
+                          .map((option) => option.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                  />
+                </label>
+              )}
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <SurveyPreview activeSurvey={activeSurvey} />
+    </div>
+  );
+}
+
+function SurveyPreview({ activeSurvey }: { activeSurvey: Survey }) {
+  return (
+    <section className="panel preview-panel">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Runtime preview</p>
+          <h3>{activeSurvey.name}</h3>
+        </div>
+        <span className={`badge ${activeSurvey.status === "published" ? "success" : "muted"}`}>{activeSurvey.status}</span>
+      </div>
+      <div className="survey-runtime">
+        <p className="runtime-trigger">{activeSurvey.audience}</p>
         {activeSurvey.questions.map((question) => (
           <div className="runtime-question" key={question.id}>
             <p>{question.title}</p>
@@ -1177,4 +1929,3 @@ function LaunchView() {
     </div>
   );
 }
-
