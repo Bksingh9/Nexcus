@@ -6,6 +6,7 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /api/health
+    preDeployCommand: pnpm db:migrate
     envVars:
       - key: NODE_ENV
         value: production
@@ -25,11 +26,3 @@ services:
         generateValue: true
       - key: FEEDBACKOS_SESSION_SECRET
         generateValue: true
-      - key: HUB_API_KEY
-        sync: false
-      - key: CUBEJS_API_SECRET
-        sync: false
-      - key: HUB_API_URL
-        sync: false
-      - key: CUBEJS_API_URL
-        sync: false
